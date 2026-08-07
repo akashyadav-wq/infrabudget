@@ -70,6 +70,37 @@ function computeCampusTotals() {
   return totals;
 }
 
+// ---------- Spent, tracked live in the Google Sheet's "Spent" columns ----------
+
+function computeSheetSpentByCategory() {
+  const totals = {};
+  getAllCategories().forEach((c) => (totals[c] = 0));
+  DATA.campuses.forEach((campus) => {
+    campus.types.forEach((type) => {
+      Object.entries(type.categories).forEach(([cat, val]) => {
+        if (totals[cat] === undefined) return;
+        totals[cat] += (val.spent || 0) * type.rooms;
+      });
+    });
+  });
+  return totals;
+}
+
+function computeSheetSpentByCampus() {
+  const totals = {};
+  DATA.campuses.forEach((campus) => {
+    totals[campus.name] = campus.types.reduce((sum, type) => {
+      const typeSpent = Object.values(type.categories).reduce((s, v) => s + (v.spent || 0), 0) * type.rooms;
+      return sum + typeSpent;
+    }, 0);
+  });
+  return totals;
+}
+
+function computeSheetSpentTotal() {
+  return Object.values(computeSheetSpentByCampus()).reduce((a, b) => a + b, 0);
+}
+
 // ---------- Donut chart (pure CSS conic-gradient) ----------
 
 function renderDonut(container, data, opts = {}) {
@@ -125,7 +156,7 @@ function renderDonut(container, data, opts = {}) {
 function renderCampusCards(container) {
   container.innerHTML = "";
   DATA.campuses.forEach((campus) => {
-    const spentByThisCampus = computeSpent().byCampus[campus.name] || 0;
+    const spentByThisCampus = computeCombinedSpent().byCampus[campus.name] || 0;
     const pctUsed = Math.min(100, (spentByThisCampus / campus.totalEstimated) * 100);
     const variance = campus.totalEstimated - campus.finalProjectCost;
 
@@ -141,12 +172,12 @@ function renderCampusCards(container) {
         <div><span class="stat-label">Estimated Budget</span><span class="stat-value">${formatINR(campus.totalEstimated)}</span></div>
         <div><span class="stat-label">BOQ Final Cost</span><span class="stat-value">${formatINR(campus.finalProjectCost)}</span></div>
         <div><span class="stat-label">Variance</span><span class="stat-value ${variance >= 0 ? "pos" : "neg"}">${formatINR(variance)}</span></div>
-        <div><span class="stat-label">Logged Spend</span><span class="stat-value">${formatINR(spentByThisCampus)}</span></div>
+        <div><span class="stat-label">Total Spend</span><span class="stat-value">${formatINR(spentByThisCampus)}</span></div>
       </div>
       <div class="progress-track">
         <div class="progress-fill" style="width:${pctUsed}%; background:${CAMPUS_COLORS[campus.name] || "#999"}"></div>
       </div>
-      <div class="progress-caption">${pctUsed.toFixed(1)}% of estimated budget logged as spent</div>
+      <div class="progress-caption">${pctUsed.toFixed(1)}% of estimated budget spent</div>
       <button class="toggle-btn" type="button">Show classroom-type breakdown ▾</button>
       <div class="campus-detail" hidden></div>
     `;
@@ -161,6 +192,8 @@ function renderCampusCards(container) {
               <td>${cat}</td>
               <td>${formatINR(val.est)}</td>
               <td>${formatINR(val.final)}</td>
+              <td>${formatINR(val.spent || 0)}</td>
+              <td>${formatINR((val.spent || 0) * type.rooms)}</td>
             </tr>`
           )
           .join("");
@@ -172,7 +205,7 @@ function renderCampusCards(container) {
             </div>
             <div class="table-scroll">
             <table class="cat-table">
-              <thead><tr><th>Category</th><th>Est. cost/room</th><th>Final cost/room</th></tr></thead>
+              <thead><tr><th>Category</th><th>Est. cost/room</th><th>Final cost/room</th><th>Spent/room</th><th>Total spent</th></tr></thead>
               <tbody>${rows}</tbody>
             </table>
             </div>
@@ -196,9 +229,9 @@ function renderCampusCards(container) {
   });
 }
 
-// ---------- Expense log ----------
+// ---------- Expense log (manual, local-only entries) ----------
 
-function computeSpent() {
+function computeLocalSpent() {
   const expenses = loadExpenses();
   const byCampus = {};
   const byCategory = {};
@@ -209,6 +242,22 @@ function computeSpent() {
     byCategory[e.category] = (byCategory[e.category] || 0) + e.amount;
   });
   return { total, byCampus, byCategory, expenses };
+}
+
+// Combines the live "Spent" columns from the Google Sheet with any manual
+// entries logged locally (for spend that hasn't made it into the sheet yet).
+function computeCombinedSpent() {
+  const sheetByCampus = computeSheetSpentByCampus();
+  const sheetByCategory = computeSheetSpentByCategory();
+  const local = computeLocalSpent();
+
+  const byCampus = { ...sheetByCampus };
+  Object.entries(local.byCampus).forEach(([k, v]) => (byCampus[k] = (byCampus[k] || 0) + v));
+
+  const byCategory = { ...sheetByCategory };
+  Object.entries(local.byCategory).forEach(([k, v]) => (byCategory[k] = (byCategory[k] || 0) + v));
+
+  return { total: computeSheetSpentTotal() + local.total, byCampus, byCategory };
 }
 
 function populateFormSelects() {
@@ -232,7 +281,7 @@ function populateFormSelects() {
 
 function renderExpenseTable() {
   const tbody = document.querySelector("#expense-table tbody");
-  const { expenses } = computeSpent();
+  const { expenses } = computeLocalSpent();
   const sorted = [...expenses].sort((a, b) => (a.date < b.date ? 1 : -1));
 
   if (sorted.length === 0) {
@@ -267,7 +316,7 @@ function renderExpenseTable() {
 
 function renderTrendChart() {
   const container = document.getElementById("trend-chart");
-  const { expenses } = computeSpent();
+  const { expenses } = computeLocalSpent();
   if (expenses.length === 0) {
     container.innerHTML = `<div class="empty-row">Trend yahan dikhega jaise hi aap expense entries add karenge.</div>`;
     return;
@@ -303,7 +352,7 @@ function renderTrendChart() {
 
 function renderSummary() {
   const g = DATA.grandTotal;
-  const spent = computeSpent().total;
+  const spent = computeCombinedSpent().total;
   const remaining = g.totalEstimatedProjectCost - spent;
 
   document.getElementById("sum-estimated").textContent = formatINR(g.totalEstimatedProjectCost);
@@ -318,7 +367,7 @@ function renderSummary() {
   const pct = Math.min(100, (spent / g.totalEstimatedProjectCost) * 100);
   document.getElementById("overall-progress-fill").style.width = pct + "%";
   document.getElementById("overall-progress-caption").textContent =
-    pct.toFixed(1) + "% of total estimated budget logged as spent";
+    pct.toFixed(1) + "% of total estimated budget spent";
 }
 
 function renderNotes() {
@@ -351,17 +400,17 @@ function renderAll() {
     { centerLabel: "BOQ Final Cost" }
   );
 
-  const spent = computeSpent();
+  const spent = computeCombinedSpent();
   const spentByCategoryData = getAllCategories().map((c) => ({
     label: c,
     value: spent.byCategory[c] || 0,
     color: CATEGORY_COLORS[c],
   }));
   if (spentByCategoryData.some((d) => d.value > 0)) {
-    renderDonut(document.getElementById("donut-spent"), spentByCategoryData, { centerLabel: "Logged Spend" });
+    renderDonut(document.getElementById("donut-spent"), spentByCategoryData, { centerLabel: "Total Spend" });
   } else {
     document.getElementById("donut-spent").innerHTML =
-      '<div class="empty-row">Expense entries add karte hi yahan category-wise spend dikhega.</div>';
+      '<div class="empty-row">Sheet ke "Spent" column me ya neeche expense log me entry hote hi yahan dikhega.</div>';
   }
 
   renderCampusCards(document.getElementById("campus-cards"));

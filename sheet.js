@@ -10,30 +10,34 @@ const SHEET_CSV_URL = `https://docs.google.com/spreadsheets/d/${SHEET_ID}/gviz/t
 const LIVE_CACHE_KEY = "infraBudgetLiveData_v1";
 
 // Column indices in the "Summary NCR" sheet (0-based).
+// Each category now has 3 columns: Est. cost/room, Final cost/room, Spent/room.
 const COL = {
   NAME: 0,
-  BRICKS_EST: 1, BRICKS_FINAL: 2,
-  WOODEN_EST: 3, WOODEN_FINAL: 4,
-  ELECTRICAL_EST: 5, ELECTRICAL_FINAL: 6,
-  WINDOW_EST: 7, WINDOW_FINAL: 8,
-  DIRECT_EST: 9, DIRECT_FINAL: 10,
-  COST_PER_ROOM_EST: 11,
-  COST_PER_ROOM_FINAL: 12,
-  TOTAL_ROOMS: 13,
-  TOTAL_CLASSROOM_COST: 14,
-  CORRIDOR_COST: 15,
-  TOTAL_ESTIMATED_PROJECT_COST: 16,
-  ALREADY_ITEM_COST: 17,
-  FINAL_PROJECT_COST: 18,
-  VARIANCE: 19,
+  BRICKS_EST: 1, BRICKS_FINAL: 2, BRICKS_SPENT: 3,
+  WOODEN_EST: 4, WOODEN_FINAL: 5, WOODEN_SPENT: 6,
+  ELECTRICAL_EST: 7, ELECTRICAL_FINAL: 8, ELECTRICAL_SPENT: 9,
+  WINDOW_EST: 10, WINDOW_FINAL: 11, WINDOW_SPENT: 12,
+  DIRECT_EST: 13, DIRECT_FINAL: 14, DIRECT_SPENT: 15,
+  COST_PER_ROOM_EST: 16,
+  COST_PER_ROOM_FINAL: 17,
+  COST_PER_ROOM_SPENT: 18,
+  TOTAL_ROOMS: 19,
+  TOTAL_CLASSROOM_COST: 20,
+  CORRIDOR_COST: 21,
+  TOTAL_ESTIMATED_PROJECT_COST: 22,
+  ALREADY_ITEM_COST: 23,
+  FINAL_PROJECT_COST: 24,
+  VARIANCE: 25,
 };
 
+// "Spent" values in the sheet are per-classroom (same basis as Est/Final) —
+// multiply by a type's room count to get the total spent for that category.
 const CATEGORY_COLUMN_PAIRS = [
-  ["Bricks / Wall Paint / Flooring / Tile", COL.BRICKS_EST, COL.BRICKS_FINAL],
-  ["Wooden Work (Desk, Door, Laminate, Pelmet)", COL.WOODEN_EST, COL.WOODEN_FINAL],
-  ["Electrical Wiring", COL.ELECTRICAL_EST, COL.ELECTRICAL_FINAL],
-  ["Window / Faculty Chair / Blinds", COL.WINDOW_EST, COL.WINDOW_FINAL],
-  ["Direct Purchase Item (Electrical Gadget)", COL.DIRECT_EST, COL.DIRECT_FINAL],
+  ["Bricks / Wall Paint / Flooring / Tile", COL.BRICKS_EST, COL.BRICKS_FINAL, COL.BRICKS_SPENT],
+  ["Wooden Work (Desk, Door, Laminate, Pelmet)", COL.WOODEN_EST, COL.WOODEN_FINAL, COL.WOODEN_SPENT],
+  ["Electrical Wiring", COL.ELECTRICAL_EST, COL.ELECTRICAL_FINAL, COL.ELECTRICAL_SPENT],
+  ["Window / Faculty Chair / Blinds", COL.WINDOW_EST, COL.WINDOW_FINAL, COL.WINDOW_SPENT],
+  ["Direct Purchase Item (Electrical Gadget)", COL.DIRECT_EST, COL.DIRECT_FINAL, COL.DIRECT_SPENT],
 ];
 
 function parseCSV(text) {
@@ -79,14 +83,15 @@ function intVal(cell) {
 
 function buildType(name, cells) {
   const categories = {};
-  CATEGORY_COLUMN_PAIRS.forEach(([label, estCol, finalCol]) => {
-    categories[label] = { est: money(cells[estCol]), final: money(cells[finalCol]) };
+  CATEGORY_COLUMN_PAIRS.forEach(([label, estCol, finalCol, spentCol]) => {
+    categories[label] = { est: money(cells[estCol]), final: money(cells[finalCol]), spent: money(cells[spentCol]) };
   });
   return {
     name,
     rooms: intVal(cells[COL.TOTAL_ROOMS]) || 1,
     costPerClassroomEst: money(cells[COL.COST_PER_ROOM_EST]),
     costPerClassroomFinal: money(cells[COL.COST_PER_ROOM_FINAL]),
+    costPerClassroomSpent: money(cells[COL.COST_PER_ROOM_SPENT]),
     categories,
   };
 }
