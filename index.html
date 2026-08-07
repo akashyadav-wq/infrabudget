@@ -1,0 +1,139 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Infra Budget Dashboard</title>
+<link rel="stylesheet" href="style.css" />
+</head>
+<body>
+
+<header class="app-header">
+  <h1>🏗️ Infra Budget Dashboard</h1>
+  <p>Sunstone campus renovation — budget vs. actual, category-wise &amp; campus-wise, updated daily.</p>
+  <div class="sync-bar">
+    <span id="sync-status" class="sync-status">Connecting to Google Sheet…</span>
+    <button id="sync-btn" type="button">🔄 Refresh now</button>
+  </div>
+</header>
+
+<main>
+
+  <section>
+    <h2>Overall Project Snapshot</h2>
+    <div class="summary-grid">
+      <div class="summary-card">
+        <span class="stat-label">Total Estimated Budget</span>
+        <span class="stat-value" id="sum-estimated">—</span>
+      </div>
+      <div class="summary-card">
+        <span class="stat-label">BOQ Final Project Cost</span>
+        <span class="stat-value" id="sum-final">—</span>
+      </div>
+      <div class="summary-card">
+        <span class="stat-label">Budget Variance</span>
+        <span class="stat-value" id="sum-variance">—</span>
+      </div>
+      <div class="summary-card">
+        <span class="stat-label">Total Classrooms</span>
+        <span class="stat-value" id="sum-rooms">—</span>
+      </div>
+      <div class="summary-card">
+        <span class="stat-label">Logged Spend (so far)</span>
+        <span class="stat-value" id="sum-spent">—</span>
+      </div>
+      <div class="summary-card">
+        <span class="stat-label">Remaining Budget</span>
+        <span class="stat-value" id="sum-remaining">—</span>
+      </div>
+    </div>
+    <div class="summary-card" style="margin-top:14px;">
+      <span class="stat-label">Budget Utilization</span>
+      <div class="progress-track"><div class="progress-fill" id="overall-progress-fill" style="width:0%"></div></div>
+      <div class="progress-caption" id="overall-progress-caption">—</div>
+    </div>
+  </section>
+
+  <section>
+    <h2>Where the Budget Goes</h2>
+    <div class="charts-grid">
+      <div class="chart-card">
+        <h3>By Campus (BOQ Final Cost)</h3>
+        <div id="donut-campus"></div>
+      </div>
+      <div class="chart-card">
+        <h3>By Work Category (BOQ Final Cost)</h3>
+        <div id="donut-category"></div>
+      </div>
+      <div class="chart-card">
+        <h3>Logged Spend — Category-wise</h3>
+        <div id="donut-spent"></div>
+      </div>
+    </div>
+  </section>
+
+  <section>
+    <h2>Campus-wise Budget Detail</h2>
+    <div id="campus-cards"></div>
+  </section>
+
+  <section>
+    <h2>📅 Daily Expense Log</h2>
+    <div class="expense-panel">
+      <form id="expense-form">
+        <label>Date
+          <input type="date" id="exp-date" required />
+        </label>
+        <label>Campus
+          <select id="exp-campus"></select>
+        </label>
+        <label>Classroom Type
+          <select id="exp-type"></select>
+        </label>
+        <label>Category
+          <select id="exp-category"></select>
+        </label>
+        <label>Amount (₹)
+          <input type="number" id="exp-amount" min="1" step="1" placeholder="e.g. 15000" required />
+        </label>
+        <label>Note (optional)
+          <input type="text" id="exp-note" placeholder="e.g. Vendor invoice #12" />
+        </label>
+        <button type="submit">+ Add Expense</button>
+      </form>
+
+      <div class="table-wrap">
+        <table id="expense-table">
+          <thead>
+            <tr><th>Date</th><th>Campus</th><th>Type</th><th>Category</th><th>Amount</th><th>Note</th><th></th></tr>
+          </thead>
+          <tbody></tbody>
+        </table>
+      </div>
+    </div>
+  </section>
+
+  <section>
+    <h2>📈 Day-wise Spend Trend</h2>
+    <div class="expense-panel">
+      <div id="trend-chart"></div>
+    </div>
+  </section>
+
+  <section>
+    <h2>Notes from BOQ</h2>
+    <div class="notes-box">
+      <strong>Important notes from the source Bill of Quantities:</strong>
+      <ul id="notes-list"></ul>
+    </div>
+  </section>
+
+</main>
+
+<footer>Budget numbers sync live from the "Summary NCR" tab of the Google Sheet. Daily expense entries are saved locally in this browser only.</footer>
+
+<script src="data.js"></script>
+<script src="sheet.js"></script>
+<script src="app.js"></script>
+</body>
+</html>

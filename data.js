@@ -1,0 +1,133 @@
+// Fallback data — a snapshot of the "Summary NCR" tab, used only if the live
+// Google Sheet fetch fails (e.g. no internet, or the sheet's sharing was turned off).
+// All money values are in INR (₹).
+
+const SEED_DATA_FALLBACK = {
+  campuses: [
+    {
+      name: "HITECH",
+      totalEstimated: 5684960,
+      finalProjectCost: 5764624,
+      alreadyItemCost: 80000,
+      corridorCost: 800000,
+      totalRooms: 12,
+      types: [
+        {
+          name: "Non-step Classroom",
+          rooms: 4,
+          categories: {
+            "Bricks / Wall Paint / Flooring / Tile": { est: 19960, final: 19960 },
+            "Wooden Work (Desk, Door, Laminate, Pelmet)": { est: 123140, final: 117795 },
+            "Electrical Wiring": { est: 30000, final: 30000 },
+            "Window / Faculty Chair / Blinds": { est: 53000, final: 57747 },
+            "Direct Purchase Item (Electrical Gadget)": { est: 97300, final: 98900 },
+          },
+          costPerClassroomEst: 323400,
+          costPerClassroomFinal: 324402,
+          totalClassroomCost: 1293600,
+          corridorCost: 400000,
+          finalProjectCost: 1297608,
+        },
+        {
+          name: "Step Classroom",
+          rooms: 8,
+          categories: {
+            "Bricks / Wall Paint / Flooring / Tile": { est: 120580, final: 129035 },
+            "Wooden Work (Desk, Door, Laminate, Pelmet)": { est: 123140, final: 117795 },
+            "Electrical Wiring": { est: 64900, final: 64900 },
+            "Window / Faculty Chair / Blinds": { est: 53000, final: 57747 },
+            "Direct Purchase Item (Electrical Gadget)": { est: 97300, final: 98900 },
+          },
+          costPerClassroomEst: 458920,
+          costPerClassroomFinal: 468377,
+          totalClassroomCost: 3671360,
+          corridorCost: 400000,
+          finalProjectCost: 3747016,
+        },
+      ],
+    },
+    {
+      name: "IITM",
+      totalEstimated: 4090600,
+      finalProjectCost: 3220350,
+      alreadyItemCost: 0,
+      corridorCost: 650000,
+      totalRooms: 10,
+      types: [
+        {
+          name: "IITM Tech",
+          rooms: 4,
+          categories: {
+            "Bricks / Wall Paint / Flooring / Tile": { est: 19960, final: 19960 },
+            "Wooden Work (Desk, Door, Laminate, Pelmet)": { est: 179800, final: 106175 },
+            "Electrical Wiring": { est: 55000, final: 55000 },
+            "Window / Faculty Chair / Blinds": { est: 10000, final: 10000 },
+            "Direct Purchase Item (Electrical Gadget)": { est: 97300, final: 98900 },
+          },
+          costPerClassroomEst: 362060,
+          costPerClassroomFinal: 290035,
+          totalClassroomCost: 1448240,
+          corridorCost: 325000,
+          totalEstimatedProjectCost: 1593240,
+          alreadyItemCost: 180000,
+          finalProjectCost: 1305140,
+        },
+        {
+          name: "IITM Management",
+          rooms: 6,
+          categories: {
+            "Bricks / Wall Paint / Flooring / Tile": { est: 19960, final: 19960 },
+            "Wooden Work (Desk, Door, Laminate, Pelmet)": { est: 179800, final: 106175 },
+            "Electrical Wiring": { est: 55000, final: 30000 },
+            "Window / Faculty Chair / Blinds": { est: 10000, final: 10000 },
+            "Direct Purchase Item (Electrical Gadget)": { est: 97300, final: 98900 },
+          },
+          costPerClassroomEst: 362060,
+          costPerClassroomFinal: 265035,
+          totalClassroomCost: 2172360,
+          corridorCost: 325000,
+          totalEstimatedProjectCost: 2497360,
+          finalProjectCost: 1915210,
+        },
+      ],
+    },
+    {
+      name: "NGF",
+      totalEstimated: 1308240,
+      finalProjectCost: 1918580,
+      alreadyItemCost: 0,
+      corridorCost: 400000,
+      totalRooms: 4,
+      types: [
+        {
+          name: "NGF Classroom",
+          rooms: 4,
+          categories: {
+            "Bricks / Wall Paint / Flooring / Tile": { est: 19960, final: 19960 },
+            "Wooden Work (Desk, Door, Laminate, Pelmet)": { est: 44800, final: 195785 },
+            "Electrical Wiring": { est: 55000, final: 55000 },
+            "Window / Faculty Chair / Blinds": { est: 10000, final: 10000 },
+            "Direct Purchase Item (Electrical Gadget)": { est: 97300, final: 98900 },
+          },
+          costPerClassroomEst: 227060,
+          costPerClassroomFinal: 379645,
+          totalClassroomCost: 908240,
+          corridorCost: 400000,
+          finalProjectCost: 1918580,
+        },
+      ],
+    },
+  ],
+  grandTotal: {
+    totalRooms: 38,
+    totalClassroomCost: 9493800,
+    corridorCost: 1850000,
+    totalEstimatedProjectCost: 11083800,
+    finalProjectCost: 10903554,
+    variance: 180246,
+  },
+  notes: [
+    "An additional cost of ₹1,00,000 has been included for the AC wiring.",
+    "Extra — AC piping cost is NOT included in the budget.",
+  ],
+};
