@@ -225,7 +225,8 @@ header.app-header p {
 .stat-value {
   transition: color 0.3s ease;
   font-variant-numeric: tabular-nums;
-  font-family: "SF Mono", "JetBrains Mono", "Cascadia Code", ui-monospace, Menlo, Consolas, monospace;
+  font-family: "Inter", "Segoe UI", -apple-system, BlinkMacSystemFont, Roboto, sans-serif;
+  letter-spacing: -0.01em;
 }
 
 .stat-value.value-flash {
@@ -240,7 +241,8 @@ header.app-header p {
   font-weight: 700;
   font-size: 0.95rem;
   font-variant-numeric: tabular-nums;
-  font-family: "SF Mono", "JetBrains Mono", "Cascadia Code", ui-monospace, Menlo, Consolas, monospace;
+  font-family: "Inter", "Segoe UI", -apple-system, BlinkMacSystemFont, Roboto, sans-serif;
+  letter-spacing: -0.01em;
 }
 
 .legend-row {
@@ -438,7 +440,8 @@ section > h2 {
   font-weight: 600;
   white-space: nowrap;
   font-variant-numeric: tabular-nums;
-  font-family: "SF Mono", "JetBrains Mono", "Cascadia Code", ui-monospace, Menlo, Consolas, monospace;
+  font-family: "Inter", "Segoe UI", -apple-system, BlinkMacSystemFont, Roboto, sans-serif;
+  letter-spacing: -0.01em;
 }
 
 .legend-pct {
@@ -446,7 +449,8 @@ section > h2 {
   width: 42px;
   text-align: right;
   font-variant-numeric: tabular-nums;
-  font-family: "SF Mono", "JetBrains Mono", "Cascadia Code", ui-monospace, Menlo, Consolas, monospace;
+  font-family: "Inter", "Segoe UI", -apple-system, BlinkMacSystemFont, Roboto, sans-serif;
+  letter-spacing: -0.01em;
 }
 
 /* ---------- Campus cards ---------- */
