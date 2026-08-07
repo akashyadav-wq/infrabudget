@@ -2,19 +2,21 @@
 // Budget data is fetched live from the Google Sheet (see sheet.js). Daily expense
 // entries are a separate log that persists in this browser via localStorage.
 
+// A vibrant, LED/neon-inspired palette — reads as a modern control-room
+// dashboard rather than flat corporate pastels, while staying legible.
 const CATEGORY_COLORS = {
-  "Bricks / Wall Paint / Flooring / Tile": "#e07a5f",
-  "Wooden Work (Desk, Door, Laminate, Pelmet)": "#f2cc8f",
-  "Electrical Wiring": "#81b29a",
-  "Window / Faculty Chair / Blinds": "#3d5a80",
-  "Direct Purchase Item (Electrical Gadget)": "#9381ff",
-  "Corridor / Stair Branding & Other": "#adb5bd",
+  "Bricks / Wall Paint / Flooring / Tile": "#ff3864",
+  "Wooden Work (Desk, Door, Laminate, Pelmet)": "#ffc93c",
+  "Electrical Wiring": "#00e6c3",
+  "Window / Faculty Chair / Blinds": "#4e7cff",
+  "Direct Purchase Item (Electrical Gadget)": "#a259ff",
+  "Corridor / Stair Branding & Other": "#94a3b8",
 };
 
 const CAMPUS_COLORS = {
-  HITECH: "#e07a5f",
-  IITM: "#3d5a80",
-  NGF: "#81b29a",
+  HITECH: "#ff3864",
+  IITM: "#4e7cff",
+  NGF: "#00e6c3",
 };
 
 const LS_KEY = "infraBudgetExpenses_v1";
@@ -25,6 +27,46 @@ let DATA = SEED_DATA_FALLBACK;
 function formatINR(n) {
   const sign = n < 0 ? "-" : "";
   return sign + "₹" + Math.abs(Math.round(n)).toLocaleString("en-IN");
+}
+
+// Animates an element's number counting up from a start value to an end
+// value, so figures "run" into place instead of snapping instantly.
+// alwaysFromZero=true (used for elements that are freshly created each
+// render, e.g. inside innerHTML-rebuilt cards) makes it count up from 0
+// every single time, so the animation plays on every page open/refresh.
+function animateNumber(el, endValue, formatFn = formatINR, opts = {}) {
+  const { duration = 900, alwaysFromZero = false } = opts;
+  const startValue = alwaysFromZero ? 0 : Number(el.dataset.rawValue || 0);
+  el.dataset.rawValue = endValue;
+  if (!alwaysFromZero && startValue === endValue) {
+    el.textContent = formatFn(endValue);
+    return;
+  }
+  el.classList.remove("value-flash");
+  void el.offsetWidth; // restart the flash animation
+  el.classList.add("value-flash");
+
+  const startTime = performance.now();
+  function tick(now) {
+    const progress = Math.min(1, (now - startTime) / duration);
+    const eased = 1 - Math.pow(1 - progress, 3);
+    const current = startValue + (endValue - startValue) * eased;
+    el.textContent = formatFn(current);
+    if (progress < 1) requestAnimationFrame(tick);
+    else el.textContent = formatFn(endValue);
+  }
+  requestAnimationFrame(tick);
+}
+
+// Scans a freshly-rendered container for [data-final] placeholders and
+// animates each one counting up from 0 — used for donut totals, legend
+// values, and campus cards, which are rebuilt (not mutated) on every render.
+function activateNumberAnimations(container) {
+  container.querySelectorAll("[data-final]").forEach((el) => {
+    const finalValue = parseFloat(el.dataset.final);
+    const formatFn = el.dataset.format === "int" ? (n) => Math.round(n).toString() : formatINR;
+    animateNumber(el, finalValue, formatFn, { alwaysFromZero: true, duration: el.dataset.duration ? Number(el.dataset.duration) : 900 });
+  });
 }
 
 function loadExpenses() {
@@ -124,7 +166,7 @@ function renderDonut(container, data, opts = {}) {
 
   const center = document.createElement("div");
   center.className = "donut-center";
-  center.innerHTML = `<div class="donut-total">${formatINR(total)}</div><div class="donut-total-label">${opts.centerLabel || "Total"}</div>`;
+  center.innerHTML = `<div class="donut-total" data-final="${total}">₹0</div><div class="donut-total-label">${opts.centerLabel || "Total"}</div>`;
   donut.appendChild(center);
   wrap.appendChild(donut);
 
@@ -138,9 +180,9 @@ function renderDonut(container, data, opts = {}) {
       const row = document.createElement("div");
       row.className = "legend-row";
       row.innerHTML = `
-        <span class="legend-dot" style="background:${d.color}"></span>
+        <span class="legend-dot" style="background:${d.color}; box-shadow: 0 0 8px ${d.color}"></span>
         <span class="legend-label">${d.label}</span>
-        <span class="legend-value">${formatINR(d.value)}</span>
+        <span class="legend-value" data-final="${d.value}">₹0</span>
         <span class="legend-pct">${pct}%</span>
       `;
       legend.appendChild(row);
@@ -149,6 +191,7 @@ function renderDonut(container, data, opts = {}) {
 
   container.innerHTML = "";
   container.appendChild(wrap);
+  activateNumberAnimations(container);
 }
 
 // ---------- Campus / classroom breakdown cards ----------
@@ -162,20 +205,21 @@ function renderCampusCards(container) {
 
     const card = document.createElement("div");
     card.className = "campus-card";
+    const campusColor = CAMPUS_COLORS[campus.name] || "#999";
     card.innerHTML = `
       <div class="campus-card-header">
-        <span class="campus-dot" style="background:${CAMPUS_COLORS[campus.name] || "#999"}"></span>
+        <span class="campus-dot" style="background:${campusColor}; box-shadow: 0 0 10px ${campusColor}, 0 0 2px ${campusColor}"></span>
         <h3>${campus.name}</h3>
         <span class="campus-rooms">${campus.totalRooms} classrooms</span>
       </div>
       <div class="campus-stats">
-        <div><span class="stat-label">Estimated Budget</span><span class="stat-value">${formatINR(campus.totalEstimated)}</span></div>
-        <div><span class="stat-label">BOQ Final Cost</span><span class="stat-value">${formatINR(campus.finalProjectCost)}</span></div>
-        <div><span class="stat-label">Variance</span><span class="stat-value ${variance >= 0 ? "pos" : "neg"}">${formatINR(variance)}</span></div>
-        <div><span class="stat-label">Total Spend</span><span class="stat-value">${formatINR(spentByThisCampus)}</span></div>
+        <div><span class="stat-label">Estimated Budget</span><span class="stat-value" data-final="${campus.totalEstimated}">₹0</span></div>
+        <div><span class="stat-label">BOQ Final Cost</span><span class="stat-value" data-final="${campus.finalProjectCost}">₹0</span></div>
+        <div><span class="stat-label">Variance</span><span class="stat-value ${variance >= 0 ? "pos" : "neg"}" data-final="${variance}">₹0</span></div>
+        <div><span class="stat-label">Total Spend</span><span class="stat-value" data-final="${spentByThisCampus}">₹0</span></div>
       </div>
       <div class="progress-track">
-        <div class="progress-fill" style="width:${pctUsed}%; background:${CAMPUS_COLORS[campus.name] || "#999"}"></div>
+        <div class="progress-fill" style="width:0%; background:linear-gradient(90deg, ${campusColor}, ${campusColor}cc); box-shadow: 0 0 8px ${campusColor}88" data-final-width="${pctUsed}"></div>
       </div>
       <div class="progress-caption">${pctUsed.toFixed(1)}% of estimated budget spent</div>
       <button class="toggle-btn" type="button">Show classroom-type breakdown ▾</button>
@@ -226,6 +270,11 @@ function renderCampusCards(container) {
     });
 
     container.appendChild(card);
+    activateNumberAnimations(card);
+
+    const fill = card.querySelector(".progress-fill");
+    const targetWidth = fill.dataset.finalWidth;
+    requestAnimationFrame(() => requestAnimationFrame(() => { fill.style.width = targetWidth + "%"; }));
   });
 }
 
@@ -355,14 +404,15 @@ function renderSummary() {
   const spent = computeCombinedSpent().total;
   const remaining = g.totalEstimatedProjectCost - spent;
 
-  document.getElementById("sum-estimated").textContent = formatINR(g.totalEstimatedProjectCost);
-  document.getElementById("sum-final").textContent = formatINR(g.finalProjectCost);
-  document.getElementById("sum-variance").textContent = formatINR(g.variance);
   document.getElementById("sum-variance").className = "stat-value " + (g.variance >= 0 ? "pos" : "neg");
-  document.getElementById("sum-rooms").textContent = g.totalRooms;
-  document.getElementById("sum-spent").textContent = formatINR(spent);
-  document.getElementById("sum-remaining").textContent = formatINR(remaining);
   document.getElementById("sum-remaining").className = "stat-value " + (remaining >= 0 ? "pos" : "neg");
+
+  animateNumber(document.getElementById("sum-estimated"), g.totalEstimatedProjectCost);
+  animateNumber(document.getElementById("sum-final"), g.finalProjectCost);
+  animateNumber(document.getElementById("sum-variance"), g.variance);
+  animateNumber(document.getElementById("sum-rooms"), g.totalRooms, (n) => Math.round(n).toString());
+  animateNumber(document.getElementById("sum-spent"), spent);
+  animateNumber(document.getElementById("sum-remaining"), remaining);
 
   const pct = Math.min(100, (spent / g.totalEstimatedProjectCost) * 100);
   document.getElementById("overall-progress-fill").style.width = pct + "%";
@@ -421,31 +471,31 @@ function renderAll() {
 
 // ---------- Live sync with Google Sheet ----------
 
-function setSyncStatus(text, isError) {
+function setSyncStatus(text, isError, isLive) {
   const el = document.getElementById("sync-status");
-  el.textContent = text;
+  el.innerHTML = (isLive ? '<span class="live-dot"></span>' : "") + text;
   el.className = "sync-status" + (isError ? " sync-error" : "");
 }
 
 async function syncFromSheet(isManual) {
   const btn = document.getElementById("sync-btn");
   if (btn) btn.disabled = true;
-  setSyncStatus("🔄 Syncing from Google Sheet…", false);
+  setSyncStatus("🔄 Syncing from Google Sheet…", false, false);
   try {
     const { data, syncedAt } = await fetchLiveData();
     DATA = data;
     const time = new Date(syncedAt).toLocaleTimeString("en-IN");
-    setSyncStatus(`✅ Live — last synced ${time}`, false);
+    setSyncStatus(`Live — last synced ${time}`, false, true);
     renderAll();
   } catch (err) {
     const cached = getCachedLiveData();
     if (cached) {
       DATA = cached.data;
       const time = new Date(cached.syncedAt).toLocaleTimeString("en-IN");
-      setSyncStatus(`⚠️ Sheet unreachable — showing cached data from ${time}`, true);
+      setSyncStatus(`⚠️ Sheet unreachable — showing cached data from ${time}`, true, false);
     } else {
       DATA = SEED_DATA_FALLBACK;
-      setSyncStatus("⚠️ Sheet unreachable — showing built-in fallback data", true);
+      setSyncStatus("⚠️ Sheet unreachable — showing built-in fallback data", true, false);
     }
     renderAll();
     if (isManual) console.error(err);
@@ -488,6 +538,20 @@ document.addEventListener("DOMContentLoaded", () => {
   });
 
   document.getElementById("sync-btn").addEventListener("click", () => syncFromSheet(true));
+
+  const themeBtn = document.getElementById("theme-toggle");
+  function applyThemeIcon() {
+    const isDark = document.documentElement.getAttribute("data-theme") === "dark";
+    themeBtn.textContent = isDark ? "☀️" : "🌙";
+  }
+  applyThemeIcon();
+  themeBtn.addEventListener("click", () => {
+    const isDark = document.documentElement.getAttribute("data-theme") === "dark";
+    const next = isDark ? "light" : "dark";
+    document.documentElement.setAttribute("data-theme", next);
+    localStorage.setItem("infraBudgetTheme", next);
+    applyThemeIcon();
+  });
 
   renderAll();
   syncFromSheet(false);
