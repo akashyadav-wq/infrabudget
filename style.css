@@ -843,6 +843,10 @@ footer {
   animation: fadeInUp 0.2s ease both;
 }
 
+.modal-overlay[hidden] {
+  display: none;
+}
+
 .modal-box {
   background: var(--card-bg);
   border: 1px solid var(--border);
