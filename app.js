@@ -534,12 +534,19 @@ function pctColorClass(pct) {
 function renderSpentModalBody(campusFilter) {
   const body = document.getElementById("spent-modal-body");
   const title = document.getElementById("spent-modal-title");
-  title.textContent = campusFilter ? `💸 Payment Breakdown — ${campusFilter}` : "💸 Payment Breakdown — All Campuses";
+  try {
+    title.textContent = campusFilter ? `💸 Payment Breakdown — ${campusFilter}` : "💸 Payment Breakdown — All Campuses";
+    renderSpentModalBodyInner(body, campusFilter);
+  } catch (err) {
+    body.innerHTML = `<div class="empty-row">Kuch gadbad ho gayi breakdown load karte waqt. "🔄 Refresh now" try kijiye, ya thodi der baad phir kholiye.<br><small>${(err && err.message) || err}</small></div>`;
+  }
+}
 
+function renderSpentModalBodyInner(body, campusFilter) {
   const blocks = SPENT_DETAIL.filter((b) => blockMatchesCampus(b, campusFilter));
 
   if (!blocks.length) {
-    body.innerHTML = `<div class="empty-row">Is campus ke liye "Spent" tab me abhi koi item-wise data nahi mila. Sheet me "Spent" tab check kar lijiye.</div>`;
+    body.innerHTML = `<div class="empty-row">Is campus ke liye "Spent" tab me abhi koi item-wise data nahi mila (ya sheet abhi load ho rahi hai). "🔄 Refresh now" try kijiye.</div>`;
     return;
   }
 
@@ -607,8 +614,23 @@ function closeSpentModal() {
 // ---------- Init ----------
 
 document.addEventListener("DOMContentLoaded", () => {
+  // Modal close/escape/backdrop wiring goes FIRST and unconditionally, so the
+  // popup can always be dismissed even if something else below throws.
+  document.getElementById("spent-modal-close").addEventListener("click", closeSpentModal);
+  document.getElementById("spent-modal-overlay").addEventListener("click", (evt) => {
+    if (evt.target.id === "spent-modal-overlay") closeSpentModal();
+  });
+  document.addEventListener("keydown", (evt) => {
+    if (evt.key === "Escape" && !document.getElementById("spent-modal-overlay").hidden) closeSpentModal();
+  });
+  document.getElementById("sum-spent-card").addEventListener("click", () => openSpentModal(null));
+  document.getElementById("donut-spent-card").addEventListener("click", () => openSpentModal(null));
+
   const cached = getCachedLiveData();
   if (cached) DATA = cached.data;
+
+  const cachedSpent = getCachedSpentDetail();
+  if (cachedSpent) SPENT_DETAIL = cachedSpent.blocks;
 
   populateFormSelects();
 
@@ -651,19 +673,6 @@ document.addEventListener("DOMContentLoaded", () => {
     document.documentElement.setAttribute("data-theme", next);
     localStorage.setItem("infraBudgetTheme", next);
     applyThemeIcon();
-  });
-
-  const cachedSpent = getCachedSpentDetail();
-  if (cachedSpent) SPENT_DETAIL = cachedSpent.blocks;
-
-  document.getElementById("sum-spent-card").addEventListener("click", () => openSpentModal(null));
-  document.getElementById("donut-spent-card").addEventListener("click", () => openSpentModal(null));
-  document.getElementById("spent-modal-close").addEventListener("click", closeSpentModal);
-  document.getElementById("spent-modal-overlay").addEventListener("click", (evt) => {
-    if (evt.target.id === "spent-modal-overlay") closeSpentModal();
-  });
-  document.addEventListener("keydown", (evt) => {
-    if (evt.key === "Escape" && !document.getElementById("spent-modal-overlay").hidden) closeSpentModal();
   });
 
   renderAll();
