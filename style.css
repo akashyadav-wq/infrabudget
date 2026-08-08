@@ -9,6 +9,10 @@
   --accent-soft: rgba(61, 90, 128, 0.1);
   --pos: #1f9d55;
   --neg: #d64545;
+  --warn: #b7791f;
+  --pos-soft: rgba(31, 157, 85, 0.1);
+  --neg-soft: rgba(214, 69, 69, 0.1);
+  --warn-soft: rgba(183, 121, 31, 0.12);
   --radius: 16px;
   --shadow: 0 1px 2px rgba(16, 24, 40, 0.06), 0 4px 16px rgba(16, 24, 40, 0.05);
   --shadow-hover: 0 4px 10px rgba(16, 24, 40, 0.08), 0 12px 28px rgba(16, 24, 40, 0.09);
@@ -26,6 +30,10 @@
   --accent-soft: rgba(143, 180, 227, 0.12);
   --pos: #4ade80;
   --neg: #f3776f;
+  --warn: #f0b93c;
+  --pos-soft: rgba(74, 222, 128, 0.12);
+  --neg-soft: rgba(243, 119, 111, 0.14);
+  --warn-soft: rgba(240, 185, 60, 0.14);
   --shadow: 0 1px 2px rgba(0, 0, 0, 0.4), 0 4px 16px rgba(0, 0, 0, 0.35);
   --shadow-hover: 0 4px 12px rgba(0, 0, 0, 0.45), 0 16px 32px rgba(0, 0, 0, 0.4);
 }
@@ -925,8 +933,75 @@ footer {
 }
 
 .spent-table td.pos,
-.spent-table td.neg {
+.spent-table td.neg,
+.spent-table td.warn {
   font-weight: 700;
+}
+
+.spent-table td.warn {
+  color: var(--warn);
+}
+
+/* Conditional formatting: tint each row by payment status for quick scanning. */
+.spent-table tbody tr.row-status-full {
+  background: var(--pos-soft);
+  border-left: 3px solid var(--pos);
+}
+
+.spent-table tbody tr.row-status-partial {
+  background: var(--warn-soft);
+  border-left: 3px solid var(--warn);
+}
+
+.spent-table tbody tr.row-status-none {
+  background: var(--neg-soft);
+  border-left: 3px solid var(--neg);
+}
+
+.spent-table tbody tr.row-status-full:hover,
+.spent-table tbody tr.row-status-partial:hover,
+.spent-table tbody tr.row-status-none:hover {
+  filter: brightness(0.97);
+}
+
+:root[data-theme="dark"] .spent-table tbody tr.row-status-full:hover,
+:root[data-theme="dark"] .spent-table tbody tr.row-status-partial:hover,
+:root[data-theme="dark"] .spent-table tbody tr.row-status-none:hover {
+  filter: brightness(1.15);
+}
+
+.pct-cell {
+  min-width: 140px;
+}
+
+.pct-bar-track {
+  width: 100%;
+  height: 6px;
+  border-radius: 999px;
+  background: var(--bg-soft);
+  overflow: hidden;
+  margin-bottom: 4px;
+}
+
+.row-status-full .pct-bar-fill {
+  background: var(--pos);
+}
+.row-status-partial .pct-bar-fill {
+  background: var(--warn);
+}
+.row-status-none .pct-bar-fill {
+  background: var(--neg);
+}
+
+.pct-bar-fill {
+  height: 100%;
+  border-radius: 999px;
+  transition: width 0.6s var(--ease);
+}
+
+.pct-badge {
+  font-size: 0.76rem;
+  white-space: nowrap;
 }
 
 @media (max-width: 640px) {

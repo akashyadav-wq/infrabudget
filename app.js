@@ -528,7 +528,15 @@ function blockMatchesCampus(block, campusFilter) {
 function pctColorClass(pct) {
   if (pct >= 100) return "pos";
   if (pct <= 0) return "neg";
-  return "";
+  return "warn";
+}
+
+// Conditional-formatting bucket for a line item, based on % paid — drives
+// both the row tint and the badge shown in the % Paid column.
+function paymentStatus(pct) {
+  if (pct >= 100) return { rowClass: "row-status-full", label: "✅ Paid" };
+  if (pct > 0) return { rowClass: "row-status-partial", label: "🟡 Partial" };
+  return { rowClass: "row-status-none", label: "🔴 Unpaid" };
 }
 
 function renderSpentModalBody(campusFilter) {
@@ -560,18 +568,22 @@ function renderSpentModalBodyInner(body, campusFilter) {
       const grossPct = gross.total > 0 ? (gross.paid / gross.total) * 100 : 0;
 
       const rows = block.items
-        .map(
-          (it) => `
-          <tr>
+        .map((it) => {
+          const status = paymentStatus(it.pct);
+          return `
+          <tr class="${status.rowClass}">
             <td>${it.category}</td>
             <td>${it.item}</td>
             <td>${formatINR(it.total)}</td>
-            <td>${formatINR(it.paid)}</td>
-            <td>${formatINR(it.remaining)}</td>
-            <td class="${pctColorClass(it.pct)}">${it.pct.toFixed(1)}%</td>
+            <td class="${it.paid > 0 ? "pos" : ""}">${formatINR(it.paid)}</td>
+            <td class="${it.remaining > 0 ? "neg" : "pos"}">${formatINR(it.remaining)}</td>
+            <td class="pct-cell ${pctColorClass(it.pct)}">
+              <div class="pct-bar-track"><div class="pct-bar-fill" style="width:${Math.min(100, Math.max(0, it.pct))}%"></div></div>
+              <span class="pct-badge">${status.label} · ${it.pct.toFixed(1)}%</span>
+            </td>
             <td>${it.remarks || ""}</td>
-          </tr>`
-        )
+          </tr>`;
+        })
         .join("");
 
       return `
