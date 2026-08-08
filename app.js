@@ -23,6 +23,7 @@ const LS_KEY = "infraBudgetExpenses_v1";
 const AUTO_REFRESH_MS = 60000;
 
 let DATA = SEED_DATA_FALLBACK;
+let SPENT_DETAIL = [];
 
 function formatINR(n) {
   const sign = n < 0 ? "-" : "";
@@ -216,7 +217,7 @@ function renderCampusCards(container) {
         <div><span class="stat-label">Estimated Budget</span><span class="stat-value" data-final="${campus.totalEstimated}">₹0</span></div>
         <div><span class="stat-label">BOQ Final Cost</span><span class="stat-value" data-final="${campus.finalProjectCost}">₹0</span></div>
         <div><span class="stat-label">Variance</span><span class="stat-value ${variance >= 0 ? "pos" : "neg"}" data-final="${variance}">₹0</span></div>
-        <div><span class="stat-label">Total Spend</span><span class="stat-value" data-final="${spentByThisCampus}">₹0</span></div>
+        <div class="clickable spend-cell" data-campus-click="${campus.name}" title="Click to see item-wise payment breakdown"><span class="stat-label">Total Spend <span class="click-hint">🔍</span></span><span class="stat-value" data-final="${spentByThisCampus}">₹0</span></div>
       </div>
       <div class="progress-track">
         <div class="progress-fill" style="width:0%; background:linear-gradient(90deg, ${campusColor}, ${campusColor}cc); box-shadow: 0 0 8px ${campusColor}88" data-final-width="${pctUsed}"></div>
@@ -268,6 +269,8 @@ function renderCampusCards(container) {
         btn.textContent = "Show classroom-type breakdown ▾";
       }
     });
+
+    card.querySelector(".spend-cell").addEventListener("click", () => openSpentModal(campus.name));
 
     container.appendChild(card);
     activateNumberAnimations(card);
@@ -502,6 +505,103 @@ async function syncFromSheet(isManual) {
   } finally {
     if (btn) btn.disabled = false;
   }
+
+  try {
+    const { blocks } = await fetchSpentDetail();
+    SPENT_DETAIL = blocks;
+  } catch (err) {
+    const cached = getCachedSpentDetail();
+    SPENT_DETAIL = cached ? cached.blocks : [];
+  }
+  if (!document.getElementById("spent-modal-overlay").hidden) renderSpentModalBody(currentModalCampusFilter);
+}
+
+// ---------- Payment breakdown modal (from the Sheet's "Spent" tab) ----------
+
+let currentModalCampusFilter = null;
+
+function blockMatchesCampus(block, campusFilter) {
+  if (!campusFilter) return true;
+  return normalizeName(block.campus) === normalizeName(campusFilter) || normalizeName(block.campus).includes(normalizeName(campusFilter));
+}
+
+function pctColorClass(pct) {
+  if (pct >= 100) return "pos";
+  if (pct <= 0) return "neg";
+  return "";
+}
+
+function renderSpentModalBody(campusFilter) {
+  const body = document.getElementById("spent-modal-body");
+  const title = document.getElementById("spent-modal-title");
+  title.textContent = campusFilter ? `💸 Payment Breakdown — ${campusFilter}` : "💸 Payment Breakdown — All Campuses";
+
+  const blocks = SPENT_DETAIL.filter((b) => blockMatchesCampus(b, campusFilter));
+
+  if (!blocks.length) {
+    body.innerHTML = `<div class="empty-row">Is campus ke liye "Spent" tab me abhi koi item-wise data nahi mila. Sheet me "Spent" tab check kar lijiye.</div>`;
+    return;
+  }
+
+  body.innerHTML = blocks
+    .map((block) => {
+      const gross = block.gross || {
+        total: block.items.reduce((s, i) => s + i.total, 0),
+        paid: block.items.reduce((s, i) => s + i.paid, 0),
+        remaining: block.items.reduce((s, i) => s + i.remaining, 0),
+      };
+      const grossPct = gross.total > 0 ? (gross.paid / gross.total) * 100 : 0;
+
+      const rows = block.items
+        .map(
+          (it) => `
+          <tr>
+            <td>${it.category}</td>
+            <td>${it.item}</td>
+            <td>${formatINR(it.total)}</td>
+            <td>${formatINR(it.paid)}</td>
+            <td>${formatINR(it.remaining)}</td>
+            <td class="${pctColorClass(it.pct)}">${it.pct.toFixed(1)}%</td>
+            <td>${it.remarks || ""}</td>
+          </tr>`
+        )
+        .join("");
+
+      return `
+        <div class="spent-block">
+          <div class="spent-block-header">
+            <h3>${block.displayName}</h3>
+            <div class="spent-block-gross">
+              <span>Total: <strong>${formatINR(gross.total)}</strong></span>
+              <span>Paid: <strong class="pos">${formatINR(gross.paid)}</strong></span>
+              <span>Remaining: <strong class="neg">${formatINR(gross.remaining)}</strong></span>
+              <span>${grossPct.toFixed(1)}% paid</span>
+            </div>
+          </div>
+          <div class="progress-track">
+            <div class="progress-fill" style="width:${Math.min(100, grossPct)}%"></div>
+          </div>
+          <div class="table-scroll">
+            <table class="cat-table spent-table">
+              <thead><tr><th>Category</th><th>Item</th><th>Total</th><th>Paid</th><th>Remaining</th><th>% Paid</th><th>Remarks</th></tr></thead>
+              <tbody>${rows}</tbody>
+            </table>
+          </div>
+        </div>`;
+    })
+    .join("");
+}
+
+function openSpentModal(campusFilter) {
+  currentModalCampusFilter = campusFilter || null;
+  renderSpentModalBody(currentModalCampusFilter);
+  document.getElementById("spent-modal-overlay").hidden = false;
+  document.body.style.overflow = "hidden";
+}
+
+function closeSpentModal() {
+  document.getElementById("spent-modal-overlay").hidden = true;
+  document.body.style.overflow = "";
 }
 
 // ---------- Init ----------
@@ -551,6 +651,19 @@ document.addEventListener("DOMContentLoaded", () => {
     document.documentElement.setAttribute("data-theme", next);
     localStorage.setItem("infraBudgetTheme", next);
     applyThemeIcon();
+  });
+
+  const cachedSpent = getCachedSpentDetail();
+  if (cachedSpent) SPENT_DETAIL = cachedSpent.blocks;
+
+  document.getElementById("sum-spent-card").addEventListener("click", () => openSpentModal(null));
+  document.getElementById("donut-spent-card").addEventListener("click", () => openSpentModal(null));
+  document.getElementById("spent-modal-close").addEventListener("click", closeSpentModal);
+  document.getElementById("spent-modal-overlay").addEventListener("click", (evt) => {
+    if (evt.target.id === "spent-modal-overlay") closeSpentModal();
+  });
+  document.addEventListener("keydown", (evt) => {
+    if (evt.key === "Escape" && !document.getElementById("spent-modal-overlay").hidden) closeSpentModal();
   });
 
   renderAll();

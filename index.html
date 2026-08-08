@@ -46,8 +46,8 @@
         <span class="stat-label">Total Classrooms</span>
         <span class="stat-value" id="sum-rooms">—</span>
       </div>
-      <div class="summary-card">
-        <span class="stat-label">Total Spend (so far)</span>
+      <div class="summary-card clickable" id="sum-spent-card" title="Click to see item-wise payment breakdown">
+        <span class="stat-label">Total Spend (so far) <span class="click-hint">🔍 click for details</span></span>
         <span class="stat-value" id="sum-spent">—</span>
       </div>
       <div class="summary-card">
@@ -73,8 +73,8 @@
         <h3>By Work Category (BOQ Final Cost)</h3>
         <div id="donut-category"></div>
       </div>
-      <div class="chart-card">
-        <h3>Total Spend — Category-wise (Sheet + Log)</h3>
+      <div class="chart-card clickable" id="donut-spent-card" title="Click to see item-wise payment breakdown">
+        <h3>Total Spend — Category-wise (Sheet + Log) <span class="click-hint">🔍 click for details</span></h3>
         <div id="donut-spent"></div>
       </div>
     </div>
@@ -137,6 +137,16 @@
   </section>
 
 </main>
+
+<div id="spent-modal-overlay" class="modal-overlay" hidden>
+  <div class="modal-box" role="dialog" aria-modal="true" aria-labelledby="spent-modal-title">
+    <div class="modal-header">
+      <h2 id="spent-modal-title">💸 Payment Breakdown</h2>
+      <button id="spent-modal-close" type="button" class="modal-close" aria-label="Close">✕</button>
+    </div>
+    <div id="spent-modal-body" class="modal-body"></div>
+  </div>
+</div>
 
 <footer>Budget numbers sync live from the "Summary NCR" tab of the Google Sheet. Daily expense entries are saved locally in this browser only.</footer>
 

@@ -7,7 +7,11 @@ const SHEET_ID = "1vy5tEtQcKWiHitelbyEpM_pNdM42-F8cxyuQDcBBfYc";
 const SHEET_TAB = "Summary NCR";
 const SHEET_CSV_URL = `https://docs.google.com/spreadsheets/d/${SHEET_ID}/gviz/tq?tqx=out:csv&sheet=${encodeURIComponent(SHEET_TAB)}`;
 
+const SPENT_TAB = "Spent";
+const SPENT_CSV_URL = `https://docs.google.com/spreadsheets/d/${SHEET_ID}/gviz/tq?tqx=out:csv&sheet=${encodeURIComponent(SPENT_TAB)}`;
+
 const LIVE_CACHE_KEY = "infraBudgetLiveData_v1";
+const SPENT_CACHE_KEY = "infraBudgetSpentDetail_v1";
 
 // Column indices in the "Summary NCR" sheet (0-based).
 // Each category now has 3 columns: Est. cost/room, Final cost/room, Spent/room.
@@ -161,6 +165,99 @@ function getCachedLiveData() {
   try {
     const cached = JSON.parse(localStorage.getItem(LIVE_CACHE_KEY));
     if (cached && cached.data) return { ...cached, source: "cache" };
+  } catch (e) {}
+  return null;
+}
+
+// ---------- "Spent" tab: item-level payment breakdown, per campus ----------
+//
+// Sheet layout: repeating blocks, one per campus —
+//   <Campus Name>, "Iteam", "Total Amount", "Amount Paid", "Remaining", "% Payment Done", "Remarks"   <- block header
+//   <Category or blank>, <Item>, <total>, <paid>, <remaining>, <pct>, <remarks>                        <- line items
+//   ...
+//   "Gross", "", <total>, <paid>, <remaining>                                                          <- block footer
+//
+// Category (col 0) is only filled on the first item of each category group;
+// blank cells belong to the most recent category above them.
+
+function parsePercent(cell, total, paid) {
+  const raw = String(cell || "").replace("%", "").trim();
+  const n = parseFloat(raw);
+  if (!isNaN(n)) return n;
+  return total > 0 ? (paid / total) * 100 : 0;
+}
+
+function buildSpentBlocksFromRows(rows) {
+  const blocks = [];
+  let current = null;
+  let lastCategory = "";
+
+  rows.forEach((r) => {
+    const col0 = (r[0] || "").trim();
+    const col1 = (r[1] || "").trim();
+
+    if (normalizeName(col1) === "ITEAM") {
+      current = { campus: col0 || "Untitled", items: [], gross: null };
+      blocks.push(current);
+      lastCategory = "";
+      return;
+    }
+    if (!current) return;
+
+    if (normalizeName(col0) === "GROSS") {
+      current.gross = { total: money(r[2]), paid: money(r[3]), remaining: money(r[4]) };
+      current = null;
+      return;
+    }
+
+    const item = col1;
+    if (!item) return;
+    if (col0) lastCategory = col0;
+    const total = money(r[2]);
+    const paid = money(r[3]);
+    current.items.push({
+      category: lastCategory,
+      item,
+      total,
+      paid,
+      remaining: r[4] !== undefined && r[4] !== "" ? money(r[4]) : total - paid,
+      pct: parsePercent(r[5], total, paid),
+      remarks: (r[6] || "").trim(),
+    });
+  });
+
+  // Disambiguate blocks that share the same campus label (e.g. two "IITM" blocks).
+  const seen = {};
+  blocks.forEach((b) => {
+    seen[b.campus] = (seen[b.campus] || 0) + 1;
+  });
+  const counters = {};
+  blocks.forEach((b) => {
+    if (seen[b.campus] > 1) {
+      counters[b.campus] = (counters[b.campus] || 0) + 1;
+      b.displayName = `${b.campus} (${counters[b.campus]})`;
+    } else {
+      b.displayName = b.campus;
+    }
+  });
+
+  return blocks;
+}
+
+async function fetchSpentDetail() {
+  const res = await fetch(SPENT_CSV_URL, { cache: "no-store" });
+  if (!res.ok) throw new Error("HTTP " + res.status);
+  const text = await res.text();
+  const rows = parseCSV(text);
+  const blocks = buildSpentBlocksFromRows(rows);
+  localStorage.setItem(SPENT_CACHE_KEY, JSON.stringify({ blocks, syncedAt: Date.now() }));
+  return { blocks, syncedAt: Date.now() };
+}
+
+function getCachedSpentDetail() {
+  try {
+    const cached = JSON.parse(localStorage.getItem(SPENT_CACHE_KEY));
+    if (cached && cached.blocks) return cached;
   } catch (e) {}
   return null;
 }
