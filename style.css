@@ -1021,6 +1021,14 @@ footer {
   justify-content: space-between;
   gap: 16px;
   flex-wrap: wrap;
+  position: relative;
+  border: 1.5px solid var(--accent);
+  background: linear-gradient(120deg, var(--accent-soft), var(--card-bg) 60%);
+  box-shadow: var(--shadow), 0 0 0 4px var(--accent-soft);
+}
+
+:root[data-theme="dark"] .external-tool-card {
+  box-shadow: var(--shadow), 0 0 24px var(--accent-soft);
 }
 
 .external-tool-card strong {
