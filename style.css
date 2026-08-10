@@ -1012,3 +1012,41 @@ footer {
     padding: 14px 16px;
   }
 }
+
+/* ---------- External tool card ---------- */
+
+.external-tool-card {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  flex-wrap: wrap;
+}
+
+.external-tool-card strong {
+  font-size: 1rem;
+}
+
+.external-tool-card p {
+  margin: 4px 0 0 0;
+  font-size: 0.85rem;
+  color: var(--text-muted);
+}
+
+.ext-tool-btn {
+  background: var(--accent);
+  color: white;
+  text-decoration: none;
+  padding: 10px 18px;
+  border-radius: 8px;
+  font-size: 0.9rem;
+  font-weight: 600;
+  white-space: nowrap;
+  transition: filter 0.2s ease, transform 0.15s var(--ease), box-shadow 0.2s ease;
+}
+
+.ext-tool-btn:hover {
+  filter: brightness(1.1);
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px var(--accent-soft);
+}
