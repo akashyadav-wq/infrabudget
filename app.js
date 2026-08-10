@@ -121,17 +121,29 @@ function computeCampusTotals() {
   return totals;
 }
 
-// ---------- Spent, tracked live in the Google Sheet's "Spent" columns ----------
+// ---------- Spent, aggregated live from the Google Sheet's "Spent" tab ----------
+// (item-level payment log) rather than Summary NCR's own Spent columns —
+// the "Spent" tab is the actual source of truth the site records payments in.
+
+// Groups a Spent-tab line item's category label into the same 5 buckets
+// Summary NCR uses, so category totals line up across both tabs.
+function mapSpentCategoryToSummaryCategory(rawCategory) {
+  const n = normalizeName(rawCategory);
+  if (n.includes("DIRECT PURCHASE")) return "Direct Purchase Item (Electrical Gadget)";
+  if (n.includes("CIVIL")) return "Bricks / Wall Paint / Flooring / Tile";
+  if (n.includes("WOODEN")) return "Wooden Work (Desk, Door, Laminate, Pelmet)";
+  if (n.includes("INTERIOR") || n.includes("FURNITURE")) return "Window / Faculty Chair / Blinds";
+  if (n.includes("ELECTRICAL")) return "Electrical Wiring";
+  return null;
+}
 
 function computeSheetSpentByCategory() {
   const totals = {};
   getAllCategories().forEach((c) => (totals[c] = 0));
-  DATA.campuses.forEach((campus) => {
-    campus.types.forEach((type) => {
-      Object.entries(type.categories).forEach(([cat, val]) => {
-        if (totals[cat] === undefined) return;
-        totals[cat] += (val.spent || 0) * type.rooms;
-      });
+  SPENT_DETAIL.forEach((block) => {
+    block.items.forEach((it) => {
+      const cat = mapSpentCategoryToSummaryCategory(it.category);
+      if (cat && totals[cat] !== undefined) totals[cat] += it.paid;
     });
   });
   return totals;
@@ -139,17 +151,19 @@ function computeSheetSpentByCategory() {
 
 function computeSheetSpentByCampus() {
   const totals = {};
-  DATA.campuses.forEach((campus) => {
-    totals[campus.name] = campus.types.reduce((sum, type) => {
-      const typeSpent = Object.values(type.categories).reduce((s, v) => s + (v.spent || 0), 0) * type.rooms;
-      return sum + typeSpent;
-    }, 0);
+  DATA.campuses.forEach((c) => (totals[c.name] = 0));
+  SPENT_DETAIL.forEach((block) => {
+    const key = normalizeName(block.campus);
+    const campus = DATA.campuses.find((c) => normalizeName(c.name) === key || key.includes(normalizeName(c.name)));
+    if (!campus) return;
+    const blockPaid = block.items.reduce((s, it) => s + it.paid, 0);
+    totals[campus.name] += blockPaid;
   });
   return totals;
 }
 
 function computeSheetSpentTotal() {
-  return Object.values(computeSheetSpentByCampus()).reduce((a, b) => a + b, 0);
+  return SPENT_DETAIL.reduce((sum, block) => sum + block.items.reduce((s, it) => s + it.paid, 0), 0);
 }
 
 // ---------- Donut chart (pure CSS conic-gradient) ----------
@@ -521,6 +535,9 @@ async function syncFromSheet(isManual) {
     const cached = getCachedSpentDetail();
     SPENT_DETAIL = cached ? cached.blocks : [];
   }
+  // Spent totals (summary cards, donut, campus cards) are derived from
+  // SPENT_DETAIL, so re-render the whole dashboard once it's in, not just the modal.
+  renderAll();
   if (!document.getElementById("spent-modal-overlay").hidden) renderSpentModalBody(currentModalCampusFilter);
 }
 
