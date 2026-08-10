@@ -131,8 +131,11 @@ function buildDataFromRows(rows) {
       totalRooms: intVal(headerRow[COL.TOTAL_ROOMS]) || types.reduce((s, t) => s + t.rooms, 0),
       // "Already item of this cost" sometimes sits on the campus header row
       // (e.g. HITECH), sometimes on a classroom-type row (e.g. IITM Tech) —
-      // add up wherever the sheet has it, per-campus.
-      alreadyItemCost: money(headerRow[COL.ALREADY_ITEM_COST]) + types.reduce((s, t) => s + (t.alreadyItemCost || 0), 0),
+      // add up wherever the sheet has it, per-campus. For campuses like NGF
+      // where the header row IS the only "type" row too, don't double-count it.
+      alreadyItemCost: childKeys.includes(key)
+        ? types.reduce((s, t) => s + (t.alreadyItemCost || 0), 0)
+        : money(headerRow[COL.ALREADY_ITEM_COST]) + types.reduce((s, t) => s + (t.alreadyItemCost || 0), 0),
       types,
     };
   }).filter(Boolean);
