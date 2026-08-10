@@ -50,7 +50,7 @@ const SEED_DATA_FALLBACK = {
       name: "IITM",
       totalEstimated: 4090600,
       finalProjectCost: 3220350,
-      alreadyItemCost: 0,
+      alreadyItemCost: 180000,
       corridorCost: 650000,
       totalRooms: 10,
       types: [

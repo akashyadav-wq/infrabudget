@@ -96,6 +96,7 @@ function buildType(name, cells) {
     costPerClassroomEst: money(cells[COL.COST_PER_ROOM_EST]),
     costPerClassroomFinal: money(cells[COL.COST_PER_ROOM_FINAL]),
     costPerClassroomSpent: money(cells[COL.COST_PER_ROOM_SPENT]),
+    alreadyItemCost: money(cells[COL.ALREADY_ITEM_COST]),
     categories,
   };
 }
@@ -128,6 +129,10 @@ function buildDataFromRows(rows) {
       finalProjectCost: money(headerRow[COL.FINAL_PROJECT_COST]),
       corridorCost: money(headerRow[COL.CORRIDOR_COST]),
       totalRooms: intVal(headerRow[COL.TOTAL_ROOMS]) || types.reduce((s, t) => s + t.rooms, 0),
+      // "Already item of this cost" sometimes sits on the campus header row
+      // (e.g. HITECH), sometimes on a classroom-type row (e.g. IITM Tech) —
+      // add up wherever the sheet has it, per-campus.
+      alreadyItemCost: money(headerRow[COL.ALREADY_ITEM_COST]) + types.reduce((s, t) => s + (t.alreadyItemCost || 0), 0),
       types,
     };
   }).filter(Boolean);

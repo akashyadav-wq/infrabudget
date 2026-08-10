@@ -88,6 +88,8 @@ function getAllCategories() {
   return Object.keys(CATEGORY_COLORS).filter((c) => c !== "Corridor / Stair Branding & Other");
 }
 
+const DIRECT_PURCHASE_CATEGORY = "Direct Purchase Item (Electrical Gadget)";
+
 function computeCategoryTotals() {
   const totals = {};
   getAllCategories().forEach((c) => (totals[c] = 0));
@@ -99,6 +101,12 @@ function computeCategoryTotals() {
       });
     });
   });
+
+  // "Already item of this cost" (items already on hand) reduces how much
+  // Direct Purchase actually needed to spend — not the corridor/branding cost.
+  const alreadyItemSum = DATA.campuses.reduce((s, c) => s + (c.alreadyItemCost || 0), 0);
+  totals[DIRECT_PURCHASE_CATEGORY] = Math.max(0, totals[DIRECT_PURCHASE_CATEGORY] - alreadyItemSum);
+
   const categorySum = Object.values(totals).reduce((a, b) => a + b, 0);
   const other = Math.max(0, DATA.grandTotal.finalProjectCost - categorySum);
   totals["Corridor / Stair Branding & Other"] = other;
